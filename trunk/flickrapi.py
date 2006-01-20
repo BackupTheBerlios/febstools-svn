@@ -350,11 +350,12 @@ class FlickrAPI:
 	#-----------------------------------------------------------------------
 	@classmethod
 	def noExitTestFailure(cls, rsp):
+		#return "%s" % (cls.getRspErrorMsg(rsp))
 		return "%s" % (cls.getRspErrorMsg(rsp))
 
 	#-----------------------------------------------------------------------
 	@classmethod
-	def testFailure(cls, rsp, exit=True):
+	def testFailure(cls, rsp, exit=False):
 		"""Exit app if the rsp XMLNode indicates failure."""
 		if rsp['stat'] == "fail":
 			sys.stderr.write("%s\n" % (cls.getPrintableError(rsp)))

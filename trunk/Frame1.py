@@ -19,12 +19,15 @@ else:
     token = fapi.getToken(browser="firefox", perms="write")
 rsp = fapi.auth_checkToken(api_key=flickrAPIKey, auth_token=token)
 fapi.noExitTestFailure(rsp)
+user_id = rsp.auth[0].user[0]['nsid']
+
+#################sux
 
 def create(parent):
     return Frame1(parent)
 
-[wxID_FRAME1, wxID_FRAME1INTESTAZIONE, wxID_FRAME1OKBUTTON, 
- wxID_FRAME1STATUSBAR1, wxID_FRAME1TEXTCTRLPOOLID, wxID_FRAME1TEXTCTRLSETID, 
+[wxID_FRAME1, wxID_FRAME1CHOICE1, wxID_FRAME1CHOICE2, wxID_FRAME1INTESTAZIONE, 
+ wxID_FRAME1OKBUTTON, wxID_FRAME1STATUSBAR1, 
 ] = [wx.NewId() for _init_ctrls in range(6)]
 
 class Frame1(wx.Frame):
@@ -48,18 +51,6 @@ class Frame1(wx.Frame):
         self._init_coll_statusBar1_Fields(self.statusBar1)
         self.SetStatusBar(self.statusBar1)
 
-        self.textCtrlSetId = wx.TextCtrl(id=wxID_FRAME1TEXTCTRLSETID,
-              name=u'textCtrlSetId', parent=self, pos=wx.Point(32, 56),
-              size=wx.Size(136, 25), style=0, value=u'insert set ID here')
-        self.textCtrlSetId.Bind(wx.EVT_SET_FOCUS,
-              self.OnTextCtrlSetIdSetFocus)
-
-        self.textCtrlPoolId = wx.TextCtrl(id=wxID_FRAME1TEXTCTRLPOOLID,
-              name=u'textCtrlPoolId', parent=self, pos=wx.Point(32, 96),
-              size=wx.Size(136, 25), style=0, value=u'insert pool ID here')
-        self.textCtrlPoolId.Bind(wx.EVT_SET_FOCUS,
-              self.OnTextCtrlPoolIdSetFocus)
-
         self.intestazione = wx.StaticText(id=wxID_FRAME1INTESTAZIONE,
               label=u'This is a very simple tool. Insert the set and the pool ID down here and push the button.',
               name=u'intestazione', parent=self, pos=wx.Point(16, 8),
@@ -74,33 +65,65 @@ class Frame1(wx.Frame):
         self.okButton.Bind(wx.EVT_BUTTON, self.OnOkButtonButton,
               id=wxID_FRAME1OKBUTTON)
 
+        self.choice1 = wx.Choice(choices=[], id=wxID_FRAME1CHOICE1,
+              name='choice1', parent=self, pos=wx.Point(32, 56),
+              size=wx.Size(136, 35), style=0)
+
+        self.choice2 = wx.Choice(choices=[], id=wxID_FRAME1CHOICE2,
+              name='choice2', parent=self, pos=wx.Point(32, 112),
+              size=wx.Size(136, 35), style=0)
+
     def __init__(self, parent):
         self._init_ctrls(parent)
+	self.PopulateLists()
 
     def OnStaticText1Help(self, event):
         event.Skip()
 
     def OnOkButtonButton(self, event):
-	#grabba tutte le foto con l'id specificato
-	self.statusBar1.SetStatusText(number=0, text='getting photos for set ' + self.textCtrlSetId.GetValue().strip() )
+	# grabba tutte le foto con l'id specificato
+	self.statusBar1.SetStatusText(number=0, text='getting photos for set ' + self.dictSet[self.choice1.GetString(self.choice1.GetSelection())] )
 	self.statusBar1.Refresh()
 	self.statusBar1.Update()
-	rsp = fapi.photosets_getPhotos(api_key=flickrAPIKey,photoset_id=self.textCtrlSetId.GetValue().strip() )
-	self.statusBar1.SetStatusText(number=0, text='getting photos for set ' + self.textCtrlSetId.GetValue().strip() + ': ' + str(fapi.noExitTestFailure(rsp)))
+	rsp = fapi.photosets_getPhotos(api_key=flickrAPIKey,photoset_id=self.dictSet[self.choice1.GetString(self.choice1.GetSelection())] )
+	self.statusBar1.SetStatusText(number=0, text='getting photos for set ' + self.dictSet[self.choice1.GetString(self.choice1.GetSelection())] + ': ' + str(fapi.noExitTestFailure(rsp)))
 	self.statusBar1.Refresh()
 	self.statusBar1.Update()
+
+	#self.statusBar1.SetStatusText(number=0, text='MEGA ANAL')
+	#self.statusBar1.Refresh()
+	#self.statusBar1.Update()
 	
 	#posta quelle pubbliche nel gruppo
 	for a in rsp.photoset[0].photo:
 		rsp = fapi.photos_getPerms(api_key=flickrAPIKey,photo_id=a['id'],auth_token=token)
 		if ( rsp.perms[0].attrib['ispublic'] ):
-			rsp = fapi.groups_pools_add(api_key=flickrAPIKey,photo_id=a['id'],auth_token=token,group_id=self.textCtrlPoolId.GetValue().strip() )
+			rsp = fapi.groups_pools_add(api_key=flickrAPIKey,photo_id=a['id'],auth_token=token,group_id=self.dictGroup[self.choice2.GetString(self.choice2.GetSelection())] )
 			self.statusBar1.SetStatusText(number=0, text='posting ' + a['id'] + '... ' + str(fapi.noExitTestFailure(rsp)) )
 			self.statusBar1.Refresh()
 			self.statusBar1.Update()
 	self.statusBar1.SetStatusText(number=0, text=u'Finished.')
         event.Skip()
-
+	
+    def PopulateLists(self):
+	self.dictSet={}
+        rsp = fapi.photosets_getList(api_key=flickrAPIKey, user_id=user_id)
+        self.statusBar1.SetStatusText(number=0, text='downloading list of sets:' + str(fapi.noExitTestFailure(rsp)))
+        self.statusBar1.Refresh()
+        self.statusBar1.Update()
+        for set in rsp.photosets[0].photoset:	
+              self.choice1.Append(set.title[0].elementText)
+	      self.dictSet[set.title[0].elementText]=set['id']
+    
+	self.dictGroup={}
+        rsp = fapi.groups_pools_getGroups(api_key=flickrAPIKey, user_id=user_id, auth_token=token)
+        self.statusBar1.SetStatusText(number=0, text='downloading list of groups:' + str(fapi.noExitTestFailure(rsp)))
+        self.statusBar1.Refresh()
+        self.statusBar1.Update()
+        for group in rsp.groups[0].group:	
+              self.choice2.Append(group['name'])
+	      self.dictGroup[group['name']]=group['id']
+    
     def OnTextCtrlPoolIdSetFocus(self, event):
 	#self.textCtrlPoolId.SetValue(u'')
         event.Skip()

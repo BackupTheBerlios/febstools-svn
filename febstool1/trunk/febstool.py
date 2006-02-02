@@ -6,13 +6,11 @@ import Frame1
 
 modules ={'Frame1': [1, 'Main frame of Application', u'Frame1.py']}
 
-class BoaApp(wx.App):
-    def OnInit(self):
         wx.InitAllImageHandlers()
         self.main = Frame1.create(None)
         self.main.Show()
         self.SetTopWindow(self.main)
-        return True
+        return False
 
 def main():
     application = BoaApp(0)
